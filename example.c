@@ -92,6 +92,9 @@ void isBMP(FILE* arq, HEADER head, INFOHEADER info){
 
         fseek(arq,28,0);
         fread(&bpp,1,2,arq);
+		
+		printf("Bitmap Type : %s\n", type);
+		printf("Bitmap BPP : %d\n", bpp);
 
         if (strcmp(type,"BM") || (bpp != 24)){
                 printf("\nThe file is not BMP format or is not 24 bits\n");
