@@ -4,6 +4,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <linux/fb.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 
 // default framebuffer palette
@@ -37,7 +38,7 @@ typedef struct
 	unsigned int imagesize;
 	int xresolution, yresolution;
 	unsigned int colours;
-	unsigned int imcolours;
+	unsigned int impcolours;
 } INFOHEADER;
 
 static unsigned short def_r[] = 
@@ -58,7 +59,7 @@ struct fb_var_screeninfo vinfo;
 struct fb_fix_screeninfo finfo;
 
 // Loaded Image Buffer
-char **buffer = null;
+char *buffer = NULL;
 
 // helper function to 'plot' a pixel in given color
 void put_pixel(int x, int y, int c)
@@ -103,25 +104,34 @@ void put_pixel_RGB565(int x, int y, int r, int g, int b)
 // the main function when just want to change what to draw
 void draw() {
 
+	int bufferPos = 0;
+	int r, g, b;
+
 	int x, y;
-	
-	for (y = 0; y < vinfo.yres; y++) {
+	for (y = 0; y < vinfo.yres/2; y++) {
 		for (x=0; x < vinfo.xres; x++) {
 			
 			// color based on the 16th of the screen width
-			int c = 16 * x / vinfo.xres;
+			//int c = 16 * x / vinfo.xres;
 			// Get color from image memory
-
 
 			// call the helper function
 			if ( vinfo.bits_per_pixel == 8 ) {
-				put_pixel(x, y, c);
+				// read 1 byte from buffer
+				//put_pixel(x, y, c);
 			}
 			else if( vinfo.bits_per_pixel == 16) {
-				put_pixel_RGB565(x, y, def_r[c], def_g[c], def_b[c]);
+				// read 2 bytes from buffer
+				//put_pixel_RGB565(x, y, def_r[c], def_g[c], def_b[c]);
 			}
 			else if( vinfo.bits_per_pixel == 24) {
-				put_pixel_RGB24(x, y, def_r[c], def_g[c], def_b[c]);
+				// read 3 bytes from buffer
+				//put_pixel_RGB24(x, y, def_r[c], def_g[c], def_b[c]);
+				r = bufferPos;
+				g = bufferPos + 1;
+				b = bufferPos + 2;
+				printf("%d %d %d\n", r, g, b);
+				bufferPos += 3;
 			}
 		}
 	}
@@ -190,6 +200,7 @@ INFOHEADER readInfo(FILE* arq){
         return(info);
 }
 
+/*
 void writeBMP(RGB **Matrix, HEADER head, FILE* arq){
 	FILE* out;
 	int i,j;
@@ -242,6 +253,7 @@ unsigned char* readBMP(char* filename)
 
     return data;
 }
+*/
 
 // application entry point
 int main(int argc, char* argv[])
@@ -271,12 +283,13 @@ int main(int argc, char* argv[])
 	{
 		if(strcmp(argv[2], "-depth")==0)
 		{
-			
+			printf("-depth set\n");
+			vinfo.bits_per_pixel = atoi(argv[3]);		
 		}
 	}
 
 	// Change variable info
-	vinfo.bits_per_pixel = 8;
+	// vinfo.bits_per_pixel = 8;
 	if (ioctl(fbfd, FBIOPUT_VSCREENINFO, &vinfo)) {
 		printf("Error setting variable information. \n");
 	}
@@ -311,7 +324,7 @@ int main(int argc, char* argv[])
 
 	// Get Bitmap Info
 	INFOHEADER info;
-	info = readInfo(arq);
+	info = readInfo(in);
 
 	int height, width, bpp;
 	height = info.height;
@@ -320,8 +333,9 @@ int main(int argc, char* argv[])
 
 	printf("File width %d, height %d, bpp %d\n", width, height, bpp);
 
-	buffer = malloc(width * height * bpp/3);
-	if(buffer == null) {
+	//buffer = (char *)malloc(1920 * 1080 * 3);
+	buffer = (char *)malloc(1920 * 1080 * 3);
+	if(buffer == NULL) {
 		printf("Create Buffer Failed");
 	}
 

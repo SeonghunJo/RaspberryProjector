@@ -6,14 +6,16 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 
-#define MAXBUF 16384
+#define MAXBUF 8192
+#define BLOCK_SIZE 8192
+
+char *buf = NULL;
 
 int main()
 {
 	int ssock;
 	int clen;
 	struct sockaddr_in client_addr, server_addr;
-	char buf[MAXBUF];
 
 	if ((ssock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
 		perror("socket error : ");
@@ -32,15 +34,36 @@ int main()
 
 	clen = sizeof(client_addr);
 	
+
+	int totalLength = 0;
 	FILE *out = fopen("out.bmp", "w");
-	
-	int length = recvfrom(ssock, (void *)buf, MAXBUF, 0, (struct sockaddr*)&client_addr, &clen);
-	printf("%d\n", length);
-	
-	fwrite(buf, length, 1, out);
+	char block[BLOCK_SIZE];
 
+	buf = (char *)malloc(1920 * 1080 * 3);
+	if(buf == NULL)
+	{
+		printf("Buffer Created Fail\n");
+		return 1;
+	}
+
+	int cnt = 0;
+
+	while(1) {
+		int length = recvfrom(ssock, (void *)block, BLOCK_SIZE, 0, (struct sockaddr*)&client_addr, &clen);
+
+		memcpy(buf + totalLength, block, length);
+		totalLength += length;
+		printf("current %d, total %d (%d)\n", length, totalLength, ++cnt);
+		
+		if(totalLength >= 1920 * 1000 * 3)
+		{
+			printf("Image receive complete!\n");
+			break;
+		}
+	}
+
+	fwrite(buf, totalLength, 1, out);
 	fclose(out);
-
 	close(ssock);	
 
 	return 0;
