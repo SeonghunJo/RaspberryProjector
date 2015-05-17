@@ -4,32 +4,31 @@
 
 //***************** Structures  *******************
 typedef struct
-	{
-		char		type[2]; 	// file type
-		unsigned int	size; 		// file size in bytes
-		unsigned short int reserved1,reserved2;
-		unsigned int	offset; 	// offset to image data
-	}HEADER;
+{
+        char		type[2]; 	// file type
+	unsigned int	size; 		// file size in bytes
+	unsigned short int reserved1,reserved2;
+	unsigned int	offset; 	// offset to image data
+} HEADER;
 
 
 typedef struct
-        {
-                unsigned char RGB[3];
-        }RGB;
+{
+        unsigned char RGB[3];
+}RGB;
 
 typedef struct
-        {
-                unsigned int size;
-                int width,height;
-                unsigned short int planes;
-                unsigned short int bpp;
-                unsigned int compression;
-                unsigned int imagesize;
-                int xresolution,yresolution;
-                unsigned int colours;
-                unsigned int impcolours;
-        }INFOHEADER;
-
+{
+        unsigned int size;
+        int width,height;
+        unsigned short int planes;
+        unsigned short int bpp;
+        unsigned int compression;
+        unsigned int imagesize;
+        int xresolution,yresolution;
+        unsigned int colours;
+        unsigned int impcolours;
+}INFOHEADER;
 
 FILE* exist(char *name);
 void isBMP(FILE* arq,HEADER head,INFOHEADER info);
