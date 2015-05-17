@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 
-#define MAX_BUF 256
+#define MAX_BUF 16384
 
 int main()
 {
@@ -59,8 +59,8 @@ int main()
 
 		if (select(FD_SETSIZE, &tmp_fds, (fd_set *)0, (fd_set *)0, (struct timeval *)0) < 1) {
 			perror("select error : ");
+			exit(1);
 		}
-		exit(1);
 		
 		for(fd=0; fd<FD_SETSIZE; fd++)
 		{
@@ -78,6 +78,8 @@ int main()
 					data_len = read(fd, buf, MAX_BUF);
 					if(data_len > 0)
 					{
+						printf("Write data to client at %d\n", fd);
+						write(1, buf, MAX_BUF);
 						write(fd, buf, MAX_BUF); // ECHO
 					}
 					else if(data_len == 0)

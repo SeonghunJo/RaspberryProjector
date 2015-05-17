@@ -93,7 +93,7 @@ void draw() {
 		for (x=0; x < vinfo.xres; x++) {
 			
 			// color based on the 16th of the screen width
-			int c = 16 * x / vinfo.xres;
+			int c = 8 * x / vinfo.xres;
 
 			// call the helper function
 			if ( vinfo.bits_per_pixel == 8 ) {

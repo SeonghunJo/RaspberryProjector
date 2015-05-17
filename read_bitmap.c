@@ -1,9 +1,8 @@
-#include<stdlib.h>
-#include<stdio.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /* Global */
 int height, width;
-
 
 typedef struct
 {
@@ -21,7 +20,7 @@ typedef struct
     int xresolution,yresolution;
     unsigned int colours;
     unsigned int impcolours;
-}INFOHEADER;
+} INFOHEADER;
 
 
 // ********** Create Matrix **********
@@ -57,6 +56,7 @@ void isBMP(FILE* arq, HEADER head, INFOHEADER info)
     
     if (strcmp(type,"BM") || (bpp != 24)){
         printf("\nThe file is not BMP format or is not 24 bits\n");
+		printf("bpp : %d", bpp);
         exit(0);
     }
 }
@@ -119,18 +119,23 @@ RGB** loadImage(FILE* arq, RGB** Matrix){
     return(Matrix);
 }
 
-
-
-void main(void)
+void main(int argc, char* argv[])
 {
     /* in your main program you just call */
     FILE* arq; /* the bitmap file 24 bits */
     RGB** Matrix_aux, Matrix;
     INFOHEADER info;
+
+	if(argc != 3)
+		return 0;
+	else
+		
+
     info = readInfo(FILE* arq);
     height = info.height;
     width = info.width;
     
+	printf("height %d, width %d\n", height, width);
     Matrix_aux = createMatrix();
     Matrix = loadImage(arq,Matrix_aux);
 }
