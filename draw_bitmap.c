@@ -102,20 +102,7 @@ void draw() {
 
 	int x, y;
 	
-	FILE *in = fopen("3.bmp", "r");
-	if(!in)
-	{
-		printf("File Open Error\n");
-	}
-	else
-	{
-		fseek(in, 0, SEEK_END);
-		printf("File size is %d", ftell(in));
-	}
-
-	
-
-	for (y = 0; y < (vinfo.yres / 2); y++) {
+	for (y = 0; y < vinfo.yres; y++) {
 		for (x=0; x < vinfo.xres; x++) {
 			
 			// color based on the 16th of the screen width
@@ -156,14 +143,14 @@ int main(int argc, char* argv[])
 		printf("Error reading variable screen info.\n");
 	}
 
-	// Store for rest (copy var_info to vinfo_orig
+	// Store for rest (copy var_info to vinfo_orig)
 	memcpy(&orig_vinfo, &vinfo, sizeof(struct fb_var_screeninfo));
 
 	if(argc == 3)
 	{
 		if(strcmp(argv[2], "-depth")==0)
 		{
-
+			
 		}
 	}
 
@@ -186,6 +173,18 @@ int main(int argc, char* argv[])
 	// map framebuffer to user memory
 	screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8; //finfo.smem_len;
 	
+
+	FILE *in = fopen("3.bmp", "r");
+	if(!in)
+	{
+		printf("File Open Error\n");
+	}
+	else
+	{
+		fseek(in, 0, SEEK_END);
+		printf("File size is %d", ftell(in));
+	}
+
 	fbp = (char*)mmap(0,
 					  screensize,
 					  PROT_READ | PROT_WRITE,
