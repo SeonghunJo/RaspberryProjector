@@ -127,9 +127,9 @@ void draw() {
 			else if( vinfo.bits_per_pixel == 24) {
 				// read 3 bytes from buffer
 				//put_pixel_RGB24(x, y, def_r[c], def_g[c], def_b[c]);
-				r = bufferPos;
-				g = bufferPos + 1;
-				b = bufferPos + 2;
+				r = (int)((char *)bufferPos);
+				g = (int)((char *)bufferPos + 1);
+				b = (int)((char *)bufferPos + 2);
 				printf("%d %d %d\n", r, g, b);
 				bufferPos += 3;
 			}
