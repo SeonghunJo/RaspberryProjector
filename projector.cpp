@@ -133,7 +133,9 @@ void draw() {
 				ir = buffer[bufferPos];
 				ig = buffer[bufferPos + 1];
 				ib = buffer[bufferPos + 2];
+				
 				put_pixel_RGB24(x, y, ir, ig, ib);
+				printf("%d %d %d\n", r, g, b);
 				bufferPos += 3;
 			}
 		}
