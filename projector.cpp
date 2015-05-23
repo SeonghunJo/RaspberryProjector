@@ -59,7 +59,7 @@ struct fb_var_screeninfo vinfo;
 struct fb_fix_screeninfo finfo;
 
 // Loaded Image Buffer
-char *buffer = NULL;
+unsigned char *buffer = NULL;
 
 // helper function to 'plot' a pixel in given color
 void put_pixel(int x, int y, int c)
@@ -104,15 +104,18 @@ void put_pixel_RGB565(int x, int y, int r, int g, int b)
 // the main function when just want to change what to draw
 void draw() {
 
-	int bufferPos = 0;
-	int r, g, b;
+	int bufferPos = 54;
+	unsigned char r, g, b;
+	
+	int ir, ig, ib;
 
 	int x, y;
-	for (y = 0; y < vinfo.yres/2; y++) {
+	//for (y = 0; y < vinfo.yres; y++) {
+	for(y=vinfo.yres-1; y>=0; y--) {
 		for (x=0; x < vinfo.xres; x++) {
 			
 			// color based on the 16th of the screen width
-			//int c = 16 * x / vinfo.xres;
+			int c = 16 * x / vinfo.xres;
 			// Get color from image memory
 
 			// call the helper function
@@ -127,10 +130,10 @@ void draw() {
 			else if( vinfo.bits_per_pixel == 24) {
 				// read 3 bytes from buffer
 				//put_pixel_RGB24(x, y, def_r[c], def_g[c], def_b[c]);
-				r = bufferPos;
-				g = bufferPos + 1;
-				b = bufferPos + 2;
-				printf("%d %d %d\n", r, g, b);
+				ir = buffer[bufferPos];
+				ig = buffer[bufferPos + 1];
+				ib = buffer[bufferPos + 2];
+				put_pixel_RGB24(x, y, ir, ig, ib);
 				bufferPos += 3;
 			}
 		}
@@ -334,12 +337,14 @@ int main(int argc, char* argv[])
 	printf("File width %d, height %d, bpp %d\n", width, height, bpp);
 
 	//buffer = (char *)malloc(1920 * 1080 * 3);
-	buffer = (char *)malloc(1920 * 1080 * 3);
+	buffer = (unsigned char *)malloc(height * width * bpp/8);
 	if(buffer == NULL) {
 		printf("Create Buffer Failed");
 	}
 
-	fread(buffer, bpp/3, width * height, in);
+	int nread = fread(buffer, sizeof(unsigned char), width * height * bpp/8, in);
+	printf("%d Memory Read\n", nread);
+	sleep(1);
 
 	// Draw
 
@@ -354,7 +359,8 @@ int main(int argc, char* argv[])
 	}
 	else {
 		// draw..
-		draw();
+		//draw();
+		memcpy(fbp, buffer, width * height * bpp/8);
 		sleep(5);
 	}
 
