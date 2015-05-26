@@ -1,32 +1,23 @@
+// Common Header
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+// Framebuffer
 #include <linux/fb.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+// Socket
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <arpa/inet.h>
+// Jpeg Converter
+#include "jpeglib.h"
 
-// default framebuffer palette
-typedef enum {
-	BLACK			=	0,
-	BLUE			=	1,
-	GREEN			=	2,
-	CYAN			=	3,
-	RED				=	4,
-	PURPLE			=	5,
-	ORANGE			= 	6,
-	LTGREY			=	7,
-	GREY			=	8,
-	LIGHT_BLUE		=	9,
-	LIGHT_GREEN		=	10,
-	LIGHT_CYAN		=	11,
-	LIGHT_RED		=	12,
-	LIGHT_PURPLE	=	13,
-	YELLOW			=	14,
-	WHITE			=	15,
+#define MAX_BUF 16384
 
-} COLOR_INDEX_T;
+using namespace std;
 
 typedef struct
 {
@@ -41,36 +32,46 @@ typedef struct
 	unsigned int impcolours;
 } INFOHEADER;
 
-static unsigned short def_r[] = 
-	{	0,	0,	0,	0,	172, 172, 172, 172,
-	 	84, 84,	84,	84,	255, 255, 255, 255 };
-
-static unsigned short def_g[] = 
-	{	0, 0, 172, 172, 0, 0, 84, 172,
-		84,	84, 255, 255, 84, 84, 255, 255 };
-
-static unsigned short def_b[] = 
-	{	0, 172, 0, 172, 0, 172, 0, 172,
-		84, 255, 84, 255, 84, 255, 84, 255 };
-
 // 'global' variables to store screen info
-char *fbp = 0;						// FRAME Buffer Mapped Memory
 struct fb_var_screeninfo vinfo;
 struct fb_fix_screeninfo finfo;
+
+struct fb_var_screeninfo orig_vinfo;
+
+int fbfd = 0;       // framebuffer file descriptor
+char *fbp = 0;      // FRAME Buffer Mapped Memory
+
+long int screensize = 0;
 
 // Loaded Image Buffer
 unsigned char *buffer = NULL;
 
-// helper function to 'plot' a pixel in given color
-void put_pixel(int x, int y, int c)
+// SOCKET
+int server_socket;
+int client_socket;
+unsigned int clen, data_len;
+
+struct sockaddr_in client_addr, server_addr;
+int fd;
+pid_t pid;
+
+fd_set read_fds, tmp_fds;
+char buf[MAX_BUF] = "Test!";
+
+// CLASSES
+class Client
 {
-	// calculate the pixel's byte offset inside the buffer
-	unsigned int pix_offset = x + y * finfo.line_length;
+private:
+    int resX, resY; // 클라이언트의 화면 크기
+    int remainCount;
 
-	// now this is about the same as 'fbp[pix_offset] = value'
-	*((char*)(fbp + pix_offset)) = c; 
-}
+    Client()
+    {
 
+    }
+};
+
+// SOURCES
 
 // RGB24 is 3 consecutive bytes (RGB)
 void put_pixel_RGB24(int x, int y, int r, int g, int b)
@@ -85,59 +86,26 @@ void put_pixel_RGB24(int x, int y, int r, int g, int b)
 	*((char *)(fbp + pix_offset + 2)) = b;
 }
 
-// RGB565 (rrrrrggggggbbbbb) total 16bit
-void put_pixel_RGB565(int x, int y, int r, int g, int b)
-{
-	// calculate the pixels' byte offset inside the buffer
-	// note: x * 2 as every pixel is 2 consecutive bytes
-	unsigned int pix_offset = x * 2 + y * finfo.line_length;
-
-	// now this is about the same as 'fbp[pix_offset] = value'
-	// but a bit more complicated for RGB565
-	unsigned short c = ((r / 8) << 11) + ((g / 4) << 5) + (b / 8);
-	// or: c = ((r / 8) * 2048) + ((g / 4) * 32) + (b / 8);
-	// write 'two bytes at once'
-	*((unsigned short*)(fbp + pix_offset)) = c;
-}
-
-// helper function for drawing - no more need to go mess with
-// the main function when just want to change what to draw
 void draw() {
 
 	int bufferPos = 54;
 	unsigned char r, g, b;
-	
+
 	int ir, ig, ib;
 
 	int x, y;
 	//for (y = 0; y < vinfo.yres; y++) {
-	for(y=vinfo.yres-1; y>=0; y--) {
+	for(y=vinfo.yres-1; y>=0; y--) { // Image Reverse
 		for (x=0; x < vinfo.xres; x++) {
-			
-			// color based on the 16th of the screen width
 			int c = 16 * x / vinfo.xres;
-			// Get color from image memory
 
-			// call the helper function
-			if ( vinfo.bits_per_pixel == 8 ) {
-				// read 1 byte from buffer
-				//put_pixel(x, y, c);
-			}
-			else if( vinfo.bits_per_pixel == 16) {
-				// read 2 bytes from buffer
-				//put_pixel_RGB565(x, y, def_r[c], def_g[c], def_b[c]);
-			}
-			else if( vinfo.bits_per_pixel == 24) {
-				// read 3 bytes from buffer
-				//put_pixel_RGB24(x, y, def_r[c], def_g[c], def_b[c]);
-				ir = buffer[bufferPos];
-				ig = buffer[bufferPos + 1];
-				ib = buffer[bufferPos + 2];
-				
-				put_pixel_RGB24(x, y, ir, ig, ib);
-				printf("%d %d %d\n", r, g, b);
-				bufferPos += 3;
-			}
+            ir = buffer[bufferPos];
+            ig = buffer[bufferPos + 1];
+            ib = buffer[bufferPos + 2];
+
+            put_pixel_RGB24(x, y, ir, ig, ib);
+            printf("%d %d %d\n", r, g, b);
+            bufferPos += 3;
 		}
 	}
 }
@@ -155,7 +123,7 @@ void isBMP(FILE* arq, INFOHEADER info){
 
         fseek(arq,28,0);
         fread(&bpp,1,2,arq);
-		
+
 		printf("Bitmap Type : %s\n", type);
 		printf("Bitmap BPP : %d\n", bpp);
 
@@ -205,68 +173,22 @@ INFOHEADER readInfo(FILE* arq){
         return(info);
 }
 
-/*
-void writeBMP(RGB **Matrix, HEADER head, FILE* arq){
-	FILE* out;
-	int i,j;
-	RGB tmp;
-	long pos = 51;
-
-	char header[54];
-	fseek(arq,0,0);
-	fread(header,54,1,arq);
-	out = fopen("out.bmp","w");
-
-	fseek(out,0,0);
-	fwrite(header,54,1,out);
-
-	printf("\nMatrix = %c\n",Matrix[0][0].RGB[0]);
-	for(i=0;i<height;i++){
-		for(j=0;j<width;j++){
-			pos+= 3;
-			fseek(out,pos,0);
-			tmp = Matrix[i][j];
-			fwrite(&tmp,(sizeof(RGB)),1,out);
-		}
-	}
-	fflush(out);
-	fclose(out);
-}
-
-unsigned char* readBMP(char* filename)
+class Drawer
 {
-    int i;
-    FILE* f = fopen(filename, "rb");
-    unsigned char info[54];
-    fread(info, sizeof(unsigned char), 54, f); // read the 54-byte header
+    // 프레임버퍼에 지속적으로 메모리를 제공하는 클래스
+    // 싱글턴으로 작성해야함
 
-    // extract image height and width from header
-    int width = *(int*)&info[18];
-    int height = *(int*)&info[22];
-
-    int size = 3 * width * height;
-    unsigned char* data = new unsigned char[size]; // allocate 3 bytes per pixel
-    fread(data, sizeof(unsigned char), size, f); // read the rest of the data at once
-    fclose(f);
-
-    for(i = 0; i < size; i += 3)
+    Drawer()
     {
-            unsigned char tmp = data[i];
-            data[i] = data[i+2];
-            data[i+2] = tmp;
+
     }
 
-    return data;
-}
-*/
+
+};
 
 // application entry point
 int main(int argc, char* argv[])
 {
-	int fbfd = 0; // framebuffer filedescriptor
-	struct fb_var_screeninfo orig_vinfo;
-	long int screensize = 0;
-
 	// Open the framebuffer device file for reading and writing
 	fbfd = open("/dev/fb0", O_RDWR);
 	if (fbfd == -1) {
@@ -284,24 +206,15 @@ int main(int argc, char* argv[])
 	// Store for rest (copy var_info to vinfo_orig)
 	memcpy(&orig_vinfo, &vinfo, sizeof(struct fb_var_screeninfo));
 
-	if(argc == 3)
-	{
-		if(strcmp(argv[2], "-depth")==0)
-		{
-			printf("-depth set\n");
-			vinfo.bits_per_pixel = atoi(argv[3]);		
-		}
-	}
+	//vinfo.bits_per_pixel = 24; // 3바이트로 고정
 
-	// Change variable info
-	// vinfo.bits_per_pixel = 8;
 	if (ioctl(fbfd, FBIOPUT_VSCREENINFO, &vinfo)) {
 		printf("Error setting variable information. \n");
 	}
 
 	// GET fixed screen information
 	if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo)) {
-		printf("Error reading fixed screen info.\n");	
+		printf("Error reading fixed screen info.\n");
 	}
 
 	printf("Display info %dx%d, %d bpp\n",
@@ -311,21 +224,7 @@ int main(int argc, char* argv[])
 	// map framebuffer to user memory
 	screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8; //finfo.smem_len;
 
-	char name[15];
-	printf("Type the image's name : ");
-	scanf("%s",name);
-	// Read bitmap
-	FILE *in = fopen(name, "r");
-	if(!in)
-	{
-		printf("File Open Error\n");
-		return 1;
-	}
-	else
-	{
-		fseek(in, 0, SEEK_END);
-		printf("File size is %d\n", ftell(in));
-	}
+    FILE *in = fopen("3.bmp", "rb");
 
 	// Get Bitmap Info
 	INFOHEADER info;
@@ -362,10 +261,90 @@ int main(int argc, char* argv[])
 	else {
 		// draw..
 		//draw();
-		memcpy(fbp, buffer, width * height * bpp/8);
-		sleep(5);
+		//memcpy(fbp, buffer, (width * height * bpp/8)/2);
+
+		sleep(1);
 	}
 
+	/* Create Socket */
+	if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		perror("socket error : ");
+		exit(1);
+	}
+
+	/* Make Server Option */
+	clen = sizeof(client_addr);
+
+	memset(&server_addr, 0, sizeof(server_addr));
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	server_addr.sin_port = htons(3317);
+
+	/* Set Server Options */
+	if(bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+		perror("bind error : ");
+		exit(1);
+	}
+
+	/* listening */
+	if (listen(server_socket, 5) < 0) {
+		perror("listen error : ");
+		exit(1);
+	}
+
+	/* Set File Descriptor */
+	FD_ZERO(&read_fds);
+	FD_SET(server_socket, &read_fds);
+
+    printf("Server is running.\n");
+	while(1)
+	{
+		tmp_fds = read_fds;
+
+		if (select(FD_SETSIZE, &tmp_fds, (fd_set *)0, (fd_set *)0, (struct timeval *)0) < 1) {
+			perror("select error : ");
+			exit(1);
+		}
+
+		for(fd=0; fd<FD_SETSIZE; fd++)
+		{
+			if(FD_ISSET(fd, &tmp_fds)) {
+
+				if(fd == server_socket)
+				{
+					client_socket = accept(server_socket, (struct sockaddr*)&client_addr, &clen);
+
+					FD_SET(client_socket, &read_fds);
+					printf("new client %d descriptor accepted\n", client_socket);
+				}
+				else
+				{
+					data_len = read(fd, buf, MAX_BUF);
+					if(data_len > 0)
+					{
+						printf("Write data to client at %d\n", fd);
+						write(1, buf, MAX_BUF);
+						write(fd, buf, MAX_BUF); // ECHO
+					}
+					else if(data_len == 0)
+					{
+						close(fd);
+						FD_CLR(fd, &read_fds);
+
+						printf("close client at %d", fd);
+					}
+					else if(data_len < 0) // error
+					{
+						perror("read error : ");
+						exit(1);
+					}
+				}
+			}
+		}
+	}
+
+
+    printf("fbp memory munmap\n");
 	// cleanup
 	munmap(fbp, screensize);
 	if (ioctl(fbfd, FBIOPUT_VSCREENINFO, &orig_vinfo)) {

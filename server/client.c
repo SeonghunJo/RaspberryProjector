@@ -8,6 +8,7 @@
 
 #define MAXBUF 256
 
+
 int main()
 {
 	int ssock;
@@ -24,7 +25,7 @@ int main()
 
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr("112.108.40.66");
+	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	server_addr.sin_port = htons(3317);
 
 	printf("Try Connect\n");
@@ -32,7 +33,7 @@ int main()
 		perror("connect error : ");
 		exit(1);
 	}
-	
+
 	printf("Run Loop\n");
 	while(1)
 	{
