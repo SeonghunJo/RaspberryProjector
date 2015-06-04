@@ -32,17 +32,14 @@
 
 #define HEADER_SIZE 8
 
-#ifdef DEBUG
-#define DEBUG_TEST 1
-#else
-#define DEBUG_TEST 0
+#undef DEBUG
 
-#endif
 #ifdef DEBUG
 #define DEBUG_PRINT(...) do{ fprintf( stdout, __VA_ARGS__ ); } while( false )
 #else
 #define DEBUG_PRINT(...) do{ } while ( false )
 #endif
+
 using namespace std;
 
 // 'global' variables to store screen info
@@ -129,6 +126,53 @@ public:
 		init();
 	}
 
+
+	int getMyAddress()
+	{
+		struct ifaddrs *ifaddr, *ifa;
+		int family, s;
+		char host[NI_MAXHOST];
+
+		if (getifaddrs(&ifaddr) == -1)
+		{
+			DEBUG_PRINT("getifaddrs");
+			exit(EXIT_FAILURE);
+		}
+
+		for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
+		{
+			if (ifa->ifa_addr == NULL)
+				continue;
+
+			s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+
+			// if wlan0
+			if ((strcmp(ifa->ifa_name, "eth0") == 0) && (ifa->ifa_addr->sa_family == AF_INET))
+			{
+				if (s != 0)
+				{
+					DEBUG_PRINT("getnameinfo() failed: %s\n", gai_strerror(s));
+					exit(EXIT_FAILURE);
+				}
+				printf("\tInterface : <%s>\n", ifa->ifa_name);
+				printf("\t  Address : <%s>\n", host);
+			}
+
+			if ((strcmp(ifa->ifa_name, "wlan0") == 0) && (ifa->ifa_addr->sa_family == AF_INET))
+			{
+				if (s != 0)
+				{
+					DEBUG_PRINT("getnameinfo() failed: %s\n", gai_strerror(s));
+					exit(EXIT_FAILURE);
+				}
+				printf("\tInterface : <%s>\n", ifa->ifa_name);
+				printf("\t  Address : <%s>\n", host);
+			}
+		}
+
+		freeifaddrs(ifaddr);
+	}
+
 	~Client()
 	{
 		if (jpegBuffer != NULL)
@@ -146,7 +190,8 @@ public:
 			{
 				focus_fd = -1;
 				ready_fd = -1;
-				//system("clear");
+				system("clear");
+				getMyAddress();
 			}
 			else
 			{
@@ -557,7 +602,7 @@ void* userListThread(void *data)
 			dataLength += sizeof(userListCount);
 
 
-			cout << "GET TOTAL DATA LENGTH" << endl;
+			DEBUG_PRINT("GET TOTAL DATA LENGTH\n");
 			for (int i = 0; i < MAX_CLIENT_NUM; i++)
 			{
 				if (client[i] != NULL && FD_ISSET(client[i]->fd, &read_fds))
@@ -651,11 +696,11 @@ void *focusObserver(void *id)
 		{
 			if (waitScreenSize)
 			{
-				memcpy(fbp, waitScreen, 1024 * 768 * 3);
+				//memcpy(fbp, waitScreen, 1024 * 768 * 3);
 			}
 			else
 			{
-				bzero(fbp, vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8);
+				//bzero(fbp, vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8);
 			}
 		}
 
