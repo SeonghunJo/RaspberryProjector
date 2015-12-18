@@ -1,0 +1,14 @@
+﻿빌드 시작: 2015-06-04 오후 6:03:31
+     1>2 노드의 "C:\Users\Jo\Desktop\Server\Server\Server.vcxproj" 프로젝트(Build 대상)입니다.
+     1>Build:
+         "C:\Program Files (x86)\Sysprogs\VisualGDB\\VisualGDB.exe" /build "C:\Users\Jo\Desktop\Server\Server\Server.vcxproj" "/solution:C:\Users\Jo\Desktop\Server\Server.sln" "/config:Debug" "/platform:Win32"
+         VisualGDB: Testing shared folder-based mapping C:\Users\Jo\Desktop\Server\Server <=> 112.108.40.66:/home/pi/Server...
+         VisualGDB: Trying to create C:\Users\Jo\Desktop\Server\Server\vgdb1414300318.tmp...
+         VisualGDB: Run "make CONFIG=Debug" in directory "/home/pi/Server" on pi@112.108.40.66 (SSH)
+         g++ -ggdb -ffunction-sections -O0  -I/usr/include -DDEBUG  -c Server.cpp -o Debug/Server.o -MD -MF Debug/Server.dep
+         g++ -o Debug/Server -Wl,-gc-sections   -L/usr/lib -Wl,--start-group Debug/Bitmap.o Debug/JPEGConverter.o Debug/Server.o Debug/trunk.o -ljpeg -lpthread -lturbojpeg  -Wl,--rpath='$ORIGIN'   -Wl,--end-group
+     1>"C:\Users\Jo\Desktop\Server\Server\Server.vcxproj" 프로젝트를 빌드했습니다(Build 대상).
+
+빌드했습니다.
+
+경과 시간: 00:00:03.08

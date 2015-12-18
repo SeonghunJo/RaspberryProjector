@@ -1,0 +1,10 @@
+http://www.ijg.org/
+
+Libjpeg Tutorial
+http://korone.net/bbs/board.php?bo_table=etc_misc&wr_id=168
+
+How to use libjpeg
+http://minimonk.tistory.com/493
+
+VISUAL GDB()
+http://visualgdb.com/tutorials/raspberry/
