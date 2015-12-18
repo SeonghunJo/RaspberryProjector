@@ -21,7 +21,7 @@ int main()
 
 	struct sockaddr_in client_addr, server_addr;
 	fd_set read_fds, tmp_fds;
-	char buf[MAX_BUF] = "Test!";
+	char buf[MAX_BUF] = "";
 
 	/* Create Socket */
 	if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -78,9 +78,32 @@ int main()
 					data_len = read(fd, buf, MAX_BUF);
 					if(data_len > 0)
 					{
-						printf("Write data to client at %d\n", fd);
-						write(1, buf, MAX_BUF);
-						write(fd, buf, MAX_BUF); // ECHO
+						printf("Write data to client at %d, size %d\n", fd, data_len);
+						if(data_len >= 4)
+						{
+							int val = 0;
+							val += (buf[3] & 0xFF);
+							val += (buf[2] & 0xFF) << 8;
+							val += (buf[1] & 0xFF) << 16;
+							val += (buf[0] & 0xFF) << 24;
+
+							printf("HEADER LENGTH : %d\n", val);
+						}
+						if(data_len >= 8)
+						{
+							int val = 0;
+							val += (buf[7] & 0xFF);
+							val += (buf[6] & 0xFF) << 8;
+							val += (buf[5] & 0xFF) << 16;
+							val += (buf[4] & 0xFF) << 24;
+
+							printf("HEADER TYPE : %d\n", val);
+						}
+						printf("-------------------------------");
+						write(1, buf, data_len);
+						printf("\n");
+
+						write(fd, buf, data_len); // ECHO
 					}
 					else if(data_len == 0)
 					{

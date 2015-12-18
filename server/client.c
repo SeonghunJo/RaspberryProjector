@@ -24,7 +24,8 @@ int main()
 
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr("112.108.40.66");
+	//server_addr.sin_addr.s_addr = inet_addr("112.108.40.66");
+	server_addr.sin_addr.s_addr = inet_addr("121.129.10.166");
 	server_addr.sin_port = htons(3317);
 
 	printf("Try Connect\n");
@@ -34,24 +35,28 @@ int main()
 	}
 	
 	printf("Run Loop\n");
-	while(1)
-	{
-		sprintf(buf, "test (%d)", num++);
+	
+	bzero(buf, MAXBUF);
+	int len = 1026;
+	int type = 1;
 
-		if(write(ssock, buf, MAXBUF) <= 0) {
-			perror("write error : ");
-			exit(1);
-		}
+	memcpy(buf, (void *)&len, sizeof(int));
+	memcpy(buf+4, (void *)&type, sizeof(int));
+	sprintf(buf+8, "hello test data");
 
-		if(read(ssock, buf, MAXBUF) <= 0) {
-			perror("read error : ");
-			exit(1);
-		}
-
-		printf("\nread : %s\n\n", buf);
-
-		sleep(1);
+	if(write(ssock, buf, MAXBUF) <= 0) {
+		perror("write error : ");
+		exit(1);
 	}
+
+	if(read(ssock, buf, MAXBUF) <= 0) {
+		perror("read error : ");
+			exit(1);
+	}
+
+	printf("\nread : %s\n\n", buf);
+
+	sleep(1);
 
 	close(ssock);
 
